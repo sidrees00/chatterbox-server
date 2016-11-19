@@ -29,5 +29,8 @@
     "presets": [
       "es2015"
     ]
+  },
+  "dependencies": {
+    "moment": "^2.16.0"
   }
 }

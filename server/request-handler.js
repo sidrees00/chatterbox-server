@@ -11,7 +11,20 @@ this file and include it in basic-server.js so that it actually works.
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
+var url = require('url');
+var moment = require('moment');
 var storeMessages = {results: []};
+
+var getTime = () => moment().format('YYYY-MM-DDTHH:MM:SS.SSS[Z]');
+var getId = () => Math.floor(Math.random() * 1000000000);
+
+storeMessages.results.push({
+  username: 'Jono',
+  text: 'Do my bidding!',
+  roomname: 'lobby',
+  createdAt: getTime(),
+  objectId: getId()
+});
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
   //
@@ -30,7 +43,7 @@ var requestHandler = function(request, response) {
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
 
   // The outgoing status.
-  var statusCode = 200;  //**standard response for successful HTTP requests
+  // var statusCode = 200;  //**standard response for successful HTTP requests
 
 
   // These headers will allow Cross-Origin Resource Sharing (CORS).
@@ -70,8 +83,10 @@ var requestHandler = function(request, response) {
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  if (request.url === '/classes/messages') {
-    if (request.method === 'GET') {
+  request.url = url.parse(request.url);
+
+  if (request.url.pathname.indexOf('/classes/messages') === 0) {
+    if (request.method === 'GET' || request.method === 'OPTIONS') {
       headers['Content-Type'] = 'application/json';
       response.writeHead(200, headers);
       return response.end(JSON.stringify(storeMessages));//**end sends response to the client
@@ -89,7 +104,11 @@ var requestHandler = function(request, response) {
       });
 
       request.on('end', function() {
-        storeMessages.results.push(JSON.parse(body)); //TODO: refactor
+        var messageData = JSON.parse(body);
+        messageData.createdAt = getTime();
+        messageData.objectId = getId();
+        storeMessages.results.push(messageData);
+        headers['Content-Type'] = 'application/json';
         response.writeHead(201, headers);
         response.end(JSON.stringify(storeMessages));
       });
