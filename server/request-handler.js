@@ -12,19 +12,17 @@ this file and include it in basic-server.js so that it actually works.
 
 **************************************************************/
 var url = require('url');
-var moment = require('moment');
-var storeMessages = {results: []};
-
-var getTime = () => moment().format('YYYY-MM-DDTHH:MM:SS.SSS[Z]');
+var querystring = require('querystring');
 var getId = () => Math.floor(Math.random() * 1000000000);
-
-storeMessages.results.push({
-  username: 'Jono',
-  text: 'Do my bidding!',
+var storeMessages = {results: [{
+  username: 'System',
+  text: 'Welcome to the lobby!',
   roomname: 'lobby',
-  createdAt: getTime(),
+  createdAt: Date.now(),
   objectId: getId()
-});
+}]};
+
+
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
   //
@@ -84,12 +82,38 @@ var requestHandler = function(request, response) {
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
   request.url = url.parse(request.url);
+  request.url.query = querystring.parse(request.url.query);
 
   if (request.url.pathname.indexOf('/classes/messages') === 0) {
     if (request.method === 'GET' || request.method === 'OPTIONS') {
       headers['Content-Type'] = 'application/json';
       response.writeHead(200, headers);
-      return response.end(JSON.stringify(storeMessages));//**end sends response to the client
+      if (!Object.keys(request.url.query).length) {
+        var returnObj = {
+          results: storeMessages.results.slice()
+        };
+        returnObj.results = returnObj.results.sort((a, b) => b.createdAt - a.createdAt);
+        return response.end(JSON.stringify(returnObj));
+      } else if (request.url.query.order) {
+        var returnObj = {
+          results: storeMessages.results.slice()
+        };
+        var sortBy = request.url.query.order;
+        var reverse = sortBy.charAt(0) === '-' ? true : false;
+        if (reverse) {
+          sortBy = sortBy.slice(1);
+        }
+        var sortFunc = function(a, b) {
+          if (reverse) {
+            return b[sortBy] - a[sortBy];
+          }
+          return a[sortBy] - b[sortBy];
+        };
+        returnObj.results = returnObj.results.sort(sortFunc);
+        return response.end(JSON.stringify(returnObj));
+      } else { // query string exists, order not specified
+        return response.end(JSON.stringify(storeMessages));//**end sends response to the client
+      }
     }
     if (request.method === 'POST') {
       var body = [];
@@ -105,8 +129,11 @@ var requestHandler = function(request, response) {
 
       request.on('end', function() {
         var messageData = JSON.parse(body);
-        messageData.createdAt = getTime();
+        messageData.createdAt = Date.now();
         messageData.objectId = getId();
+        if (!messageData.roomname) {
+          messageData.roomname = 'lobby';
+        }
         storeMessages.results.push(messageData);
         headers['Content-Type'] = 'application/json';
         response.writeHead(201, headers);
