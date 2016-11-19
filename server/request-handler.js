@@ -89,10 +89,9 @@ var requestHandler = function(request, response) {
       });
 
       request.on('end', function() {
-        body = Buffer.concat(body).toString();//data will be binary(01)
         storeMessages.results.push(JSON.parse(body)); //TODO: refactor
         response.writeHead(201, headers);
-        response.end('Message received!!');
+        response.end(JSON.stringify(storeMessages));
       });
     }
   } else {
