@@ -1,5 +1,5 @@
 /* Import node's http module: */
-var http = require('http');
+var http = require('http'); //**native module built into node
 var handler = require('./request-handler.js');
 
 // Every server needs to listen on a port with a unique number. The
@@ -22,7 +22,7 @@ var ip = '127.0.0.1';
 // incoming requests.
 //
 // After creating the server, we will tell it to listen on the given port and IP. */
-var server = http.createServer(handler.requestHandler);
+var server = http.createServer(handler.requestHandler); //**creates an instance of http.Server class; *think of a HTML event listner in which the requesHandler is invoked when a request a received. 
 console.log('Listening on http://' + ip + ':' + port);
 server.listen(port, ip);
 

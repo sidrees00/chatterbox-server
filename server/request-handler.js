@@ -11,7 +11,7 @@ this file and include it in basic-server.js so that it actually works.
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
-
+var storeMessages = {results: []};
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
   //
@@ -30,9 +30,9 @@ var requestHandler = function(request, response) {
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
 
   // The outgoing status.
-  var statusCode = 200;
+  var statusCode = 200;  //**standard response for successful HTTP requests
 
-  
+
   // These headers will allow Cross-Origin Resource Sharing (CORS).
   // This code allows this server to talk to websites that
   // are on different domains, for instance, your chat client.
@@ -60,7 +60,8 @@ var requestHandler = function(request, response) {
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
-  response.writeHead(statusCode, headers);
+  // response.writeHead(statusCode, headers);
+
 
   // Make sure to always call response.end() - Node may not send
   // anything back to the client until you do. The string you pass to
@@ -70,10 +71,34 @@ var requestHandler = function(request, response) {
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
   if (request.url === '/classes/messages') {
-    var fakeData = JSON.stringify({results: []});
-    return response.end(fakeData);
+    if (request.method === 'GET') {
+      headers['Content-Type'] = 'application/json';
+      response.writeHead(200, headers);
+      return response.end(JSON.stringify(storeMessages));//**end sends response to the client
+    }
+    if (request.method === 'POST') {
+      var body = [];
+      request.on('error', function(err) {
+        console.error(err);
+        response.writeHead(500, headers);
+        response.end('Could not parse request body');
+      });
+      
+      request.on('data', function(chunk) {
+        body.push(chunk);
+      });
+
+      request.on('end', function() {
+        body = Buffer.concat(body).toString();//data will be binary(01)
+        storeMessages.results.push(JSON.parse(body)); //TODO: refactor
+        response.writeHead(201, headers);
+        response.end('Message received!!');
+      });
+    }
+  } else {
+    response.writeHead(404, headers);
+    response.end('Hello, World!'); //**sends this back to the browser
   }
-  response.end('Hello, World!');
 };
 
 module.exports.requestHandler = requestHandler;
